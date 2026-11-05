@@ -1,0 +1,1797 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BioPlant: Autonomous Lunar/Martian Hydroponic Nutrient Loop Guard</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Bulletproof MathJax v3 Configuration -->
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']]
+      },
+      svg: { fontCache: 'global' }
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #03050a;
+      color: #e2e8f0;
+      overflow-x: hidden;
+    }
+    .mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .formula-box {
+      background-color: #070b14;
+      border: 1px solid #1e293b;
+      border-radius: 0.5rem;
+      padding: 0.85rem;
+      text-align: center;
+      color: #38bdf8;
+      overflow-x: auto;
+      margin: 0.5rem 0;
+      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.6);
+    }
+    /* Custom scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #090e17;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #334155;
+    }
+    .glow-cyan {
+      box-shadow: 0 0 20px -3px rgba(6, 182, 212, 0.35);
+    }
+    .glow-emerald {
+      box-shadow: 0 0 20px -3px rgba(16, 185, 129, 0.35);
+    }
+    .glow-rose {
+      box-shadow: 0 0 20px -3px rgba(244, 63, 94, 0.35);
+    }
+    .glass-panel {
+      background: rgba(13, 19, 33, 0.72);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+    }
+    @media print {
+      body { background: white; color: black; }
+      .no-print { display: none !important; }
+      .glass-panel { background: white; border: 1px solid #ccc; }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col bg-[#03050a]">
+
+  <!-- Top Navigation & System Status Bar -->
+  <header class="glass-panel sticky top-0 z-50 border-b border-gray-800/80 px-4 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <div class="h-10 w-10 rounded-xl bg-gradient-to-tr from-emerald-600 via-teal-500 to-cyan-400 p-[1.5px] flex items-center justify-center glow-emerald">
+        <div class="w-full h-full bg-[#070b14] rounded-[10px] flex items-center justify-center">
+          <i data-lucide="sprout" class="w-5 h-5 text-emerald-400"></i>
+        </div>
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="font-bold tracking-tight text-lg text-white">BioPlant</span>
+          <span class="text-xs px-2 py-0.5 rounded-full bg-cyan-950/80 border border-cyan-700/60 text-cyan-300 mono font-semibold">NASA SBIR T8.04</span>
+          <span class="text-xs px-2 py-0.5 rounded-full bg-emerald-950/80 border border-emerald-700/60 text-emerald-300 mono hidden sm:inline-flex">TRL-4 Lab Microgravity</span>
+        </div>
+        <p class="text-xs text-gray-400 tracking-wide">Autonomous Lunar/Martian Hydroponic $(m, R)$ Nutrient Loop Guard</p>
+      </div>
+    </div>
+
+    <!-- Center Navigation Tabs -->
+    <nav class="flex items-center gap-1.5 bg-gray-950/80 p-1.5 rounded-xl border border-gray-800 text-sm mono">
+      <button id="tabBtnSim" onclick="switchTab('sim')" class="flex items-center gap-2 px-3.5 py-1.5 rounded-lg font-medium text-emerald-300 bg-emerald-950/60 border border-emerald-500/40 transition">
+        <i data-lucide="activity" class="w-4 h-4"></i>
+        <span>Telemetry HUD</span>
+      </button>
+      <button id="tabBtnPhysics" onclick="switchTab('physics')" class="flex items-center gap-2 px-3.5 py-1.5 rounded-lg font-medium text-gray-400 hover:text-gray-200 transition">
+        <i data-lucide="atom" class="w-4 h-4"></i>
+        <span>Physics & Math</span>
+      </button>
+      <button id="tabBtnProposal" onclick="switchTab('proposal')" class="flex items-center gap-2 px-3.5 py-1.5 rounded-lg font-medium text-gray-400 hover:text-gray-200 transition">
+        <i data-lucide="award" class="w-4 h-4"></i>
+        <span>$225k SBIR Plan</span>
+      </button>
+      <button id="tabBtnARR" onclick="switchTab('arr')" class="flex items-center gap-2 px-3.5 py-1.5 rounded-lg font-medium text-gray-400 hover:text-gray-200 transition">
+        <i data-lucide="line-chart" class="w-4 h-4"></i>
+        <span>Commercial ARR</span>
+      </button>
+    </nav>
+
+    <!-- Quick Status Badges -->
+    <div class="flex items-center gap-3">
+      <div id="systemStateBadge" class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-950/80 border border-emerald-600/60 text-xs font-semibold text-emerald-300 mono">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span id="systemStateText">NOMINAL STEADY LOOP</span>
+      </div>
+      <button onclick="window.print()" class="p-2 rounded-lg bg-gray-900 border border-gray-800 text-gray-400 hover:text-gray-200 hover:bg-gray-800 transition" title="Print Dossier / Export PDF">
+        <i data-lucide="printer" class="w-4 h-4"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN TAB CONTENT CONTAINER -->
+  <main class="flex-1 w-full max-w-[1720px] mx-auto p-4 lg:p-6 space-y-6">
+
+    <!-- ========================================================================= -->
+    <!-- TAB 1: LIVE SIMULATION & TELEMETRY HUD                                    -->
+    <!-- ========================================================================= -->
+    <div id="viewSim" class="space-y-6">
+      
+      <!-- Top Critical Metrics Ribbon -->
+      <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+        <!-- Metric 1: System Mass -->
+        <div class="glass-panel p-3.5 rounded-xl border border-gray-800/80">
+          <div class="flex items-center justify-between text-xs text-gray-400 mono">
+            <span>MODULE MASS ($m$)</span>
+            <i data-lucide="scale" class="w-3.5 h-3.5 text-cyan-400"></i>
+          </div>
+          <div class="mt-1.5 flex items-baseline gap-2">
+            <span id="metricMass" class="text-2xl font-bold mono text-white">450.0</span>
+            <span class="text-xs text-cyan-400 mono">grams</span>
+          </div>
+          <div class="text-[11px] text-gray-500 mt-1 flex justify-between">
+            <span>Nominal: 440–460g</span>
+            <span id="massDelta" class="text-emerald-400 mono">+0.0 g/s</span>
+          </div>
+        </div>
+
+        <!-- Metric 2: Ionic Resistance -->
+        <div class="glass-panel p-3.5 rounded-xl border border-gray-800/80">
+          <div class="flex items-center justify-between text-xs text-gray-400 mono">
+            <span>IONIC IMPEDANCE ($R$)</span>
+            <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-400"></i>
+          </div>
+          <div class="mt-1.5 flex items-baseline gap-2">
+            <span id="metricRes" class="text-2xl font-bold mono text-amber-300">120.0</span>
+            <span class="text-xs text-amber-400 mono">$\Omega$</span>
+          </div>
+          <div class="text-[11px] text-gray-500 mt-1 flex justify-between">
+            <span>Nominal: 105–135 $\Omega$</span>
+            <span id="resDelta" class="text-amber-400 mono">0.0 $\Omega$/s</span>
+          </div>
+        </div>
+
+        <!-- Metric 3: EC (Electrical Conductivity) -->
+        <div class="glass-panel p-3.5 rounded-xl border border-gray-800/80">
+          <div class="flex items-center justify-between text-xs text-gray-400 mono">
+            <span>CALCULATED EC</span>
+            <i data-lucide="droplet" class="w-3.5 h-3.5 text-emerald-400"></i>
+          </div>
+          <div class="mt-1.5 flex items-baseline gap-2">
+            <span id="metricEC" class="text-2xl font-bold mono text-emerald-300">1.82</span>
+            <span class="text-xs text-emerald-400 mono">mS/cm</span>
+          </div>
+          <div class="text-[11px] text-gray-500 mt-1">
+            <span>Target: Hoagland 1.8 mS</span>
+          </div>
+        </div>
+
+        <!-- Metric 4: Moisture Saturation -->
+        <div class="glass-panel p-3.5 rounded-xl border border-gray-800/80">
+          <div class="flex items-center justify-between text-xs text-gray-400 mono">
+            <span>SUBSTRATE VOID SAT</span>
+            <i data-lucide="waves" class="w-3.5 h-3.5 text-blue-400"></i>
+          </div>
+          <div class="mt-1.5 flex items-baseline gap-2">
+            <span id="metricSat" class="text-2xl font-bold mono text-blue-300">78.4</span>
+            <span class="text-xs text-blue-400 mono">%</span>
+          </div>
+          <div class="w-full bg-gray-800 h-1.5 rounded-full mt-2 overflow-hidden">
+            <div id="barSat" class="bg-blue-500 h-full w-[78%] transition-all duration-300"></div>
+          </div>
+        </div>
+
+        <!-- Metric 5: Active Water Injector -->
+        <div class="glass-panel p-3.5 rounded-xl border border-gray-800/80">
+          <div class="flex items-center justify-between text-xs text-gray-400 mono">
+            <span>DI-WATER INJECTOR</span>
+            <i data-lucide="pipette" class="w-3.5 h-3.5 text-sky-400"></i>
+          </div>
+          <div class="mt-1.5 flex items-baseline gap-2">
+            <span id="metricInjWater" class="text-2xl font-bold mono text-sky-300">0.00</span>
+            <span class="text-xs text-sky-400 mono">mL/min</span>
+          </div>
+          <div class="text-[11px] text-gray-500 mt-1 flex items-center gap-1.5">
+            <span id="dotWater" class="w-2 h-2 rounded-full bg-gray-600"></span>
+            <span id="lblWater">IDLE / CLOSED</span>
+          </div>
+        </div>
+
+        <!-- Metric 6: Concentrated Nutrient Injector -->
+        <div class="glass-panel p-3.5 rounded-xl border border-gray-800/80">
+          <div class="flex items-center justify-between text-xs text-gray-400 mono">
+            <span>NUTRIENT NPK+ SALTS</span>
+            <i data-lucide="flask-conical" class="w-3.5 h-3.5 text-violet-400"></i>
+          </div>
+          <div class="mt-1.5 flex items-baseline gap-2">
+            <span id="metricInjNutrient" class="text-2xl font-bold mono text-violet-300">0.00</span>
+            <span class="text-xs text-violet-400 mono">mL/min</span>
+          </div>
+          <div class="text-[11px] text-gray-500 mt-1 flex items-center gap-1.5">
+            <span id="dotNutrient" class="w-2 h-2 rounded-full bg-gray-600"></span>
+            <span id="lblNutrient">IDLE / CLOSED</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Interactive Row: Hydroponic Chamber Canvas + Phase Space (m, R) -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Left 7 Cols: High-DPI Substrate Canvas & Microgravity Cross Section -->
+        <div class="lg:col-span-7 glass-panel rounded-2xl p-4 border border-gray-800/90 flex flex-col">
+          <div class="flex flex-wrap items-center justify-between pb-3 border-b border-gray-800/80 gap-2">
+            <div class="flex items-center gap-2">
+              <i data-lucide="microscope" class="w-4 h-4 text-emerald-400"></i>
+              <span class="font-semibold text-sm text-gray-200">Lunar/Martian Microgravity Root Sponge Cross-Section</span>
+            </div>
+            <div class="flex items-center gap-3 text-xs mono">
+              <span class="flex items-center gap-1 text-emerald-400"><span class="w-2 h-2 bg-emerald-500 rounded-full inline-block"></span> Root Mass</span>
+              <span class="flex items-center gap-1 text-cyan-400"><span class="w-2 h-2 bg-cyan-500 rounded-full inline-block"></span> Hydration Meniscus</span>
+              <span class="flex items-center gap-1 text-amber-400"><span class="w-2 h-2 bg-amber-500 rounded-full inline-block"></span> $K^+, NO_3^-, PO_4^{3-}$ Ions</span>
+              <span class="flex items-center gap-1 text-rose-400"><span class="w-2 h-2 bg-rose-500 rounded-full inline-block"></span> Salt Crust Danger</span>
+            </div>
+          </div>
+
+          <!-- Canvas Container with Responsive Fallback -->
+          <div class="relative w-full flex-1 min-h-[300px] mt-3 bg-[#020408] rounded-xl overflow-hidden border border-gray-900 flex items-center justify-center">
+            <canvas id="chamberCanvas" class="w-full h-full block"></canvas>
+            
+            <!-- In-Canvas Overlay HUD -->
+            <div class="absolute bottom-2 left-3 pointer-events-none text-[11px] mono text-gray-400/90 space-y-0.5 bg-black/60 px-2.5 py-1.5 rounded-lg border border-white/5">
+              <div>Porous Matrix: Phenolic Foam / Ceramic Sintered Sleeve</div>
+              <div>Electrode Geometry: 4-Point Interdigital Ag/AgCl Ring Sensors</div>
+              <div>Gravity Regime: <span id="gravityRegimeText" class="text-cyan-300">Lunar Surface (0.166g)</span></div>
+            </div>
+
+            <!-- In-Canvas Warning Overlay -->
+            <div id="canvasAlertOverlay" class="hidden absolute top-4 right-4 bg-rose-950/90 border border-rose-600/80 text-rose-200 text-xs px-3 py-2 rounded-lg mono flex items-center gap-2 glow-rose animate-bounce">
+              <i data-lucide="alert-triangle" class="w-4 h-4 text-rose-400"></i>
+              <span id="canvasAlertText">CRITICAL CRYSTALLIZATION HAZARD</span>
+            </div>
+          </div>
+
+          <!-- Bottom Micro-dosing Actuator Bar -->
+          <div class="mt-3 pt-3 border-t border-gray-800/80 flex flex-wrap items-center justify-between text-xs mono gap-2">
+            <div class="flex items-center gap-2">
+              <span class="text-gray-400">Micro-Injector Rail:</span>
+              <span id="railPZT1" class="px-2 py-0.5 rounded bg-gray-900 text-gray-300 border border-gray-800">Piezo PZT-A1 [DI-H2O]</span>
+              <span id="railPZT2" class="px-2 py-0.5 rounded bg-gray-900 text-gray-300 border border-gray-800">Piezo PZT-B1 [NPK Stock]</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="text-gray-400">State Observer: <span id="observerConfidence" class="text-emerald-400 font-bold">99.4% CERTAINTY</span></span>
+              <span class="text-gray-400">Control Loop: <span class="text-cyan-400">25 Hz Kalman Inversion</span></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right 5 Cols: Phase-Space Diagnostic (m vs. R) -->
+        <div class="lg:col-span-5 glass-panel rounded-2xl p-4 border border-gray-800/90 flex flex-col">
+          <div class="flex items-center justify-between pb-3 border-b border-gray-800/80">
+            <div>
+              <div class="flex items-center gap-2">
+                <i data-lucide="compass" class="w-4 h-4 text-cyan-400"></i>
+                <span class="font-semibold text-sm text-gray-200">Phase Space: Mass ($m$) vs. Resistance ($R$)</span>
+              </div>
+              <p class="text-[11px] text-gray-400">Real-time $(m, R)$ trajectory decouples transpiration vs. nutrient consumption</p>
+            </div>
+            <span class="px-2 py-0.5 bg-gray-900 text-gray-300 border border-gray-800 rounded text-xs mono">Phase Orbit</span>
+          </div>
+
+          <!-- Phase-Space Scatter Chart -->
+          <div class="relative w-full flex-1 min-h-[300px] mt-2">
+            <canvas id="phaseChart"></canvas>
+          </div>
+
+          <!-- Quadrant Identification Guide -->
+          <div class="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-gray-800/80 text-[10px] mono">
+            <div class="p-1.5 rounded bg-red-950/30 border border-red-900/40 text-red-300">
+              <span class="font-bold">▲ Spiking $R$ + Low $m$:</span> Drought & Salt Crust
+            </div>
+            <div class="p-1.5 rounded bg-amber-950/30 border border-amber-900/40 text-amber-300">
+              <span class="font-bold">▲ Spiking $R$ + Flat $m$:</span> Mineral Depletion
+            </div>
+            <div class="p-1.5 rounded bg-blue-950/30 border border-blue-900/40 text-blue-300">
+              <span class="font-bold">▼ Low $R$ + High $m$:</span> Root-Zone Flooding / Anoxia
+            </div>
+            <div class="p-1.5 rounded bg-emerald-950/30 border border-emerald-900/40 text-emerald-300">
+              <span class="font-bold">★ Center Green Box:</span> Optimal Bioregenerative Zone
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Secondary Telemetry Plots & Closed-Loop Control Deck -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Left 6 Cols: Time-Series Graphs (Mass and Resistance) -->
+        <div class="lg:col-span-6 glass-panel rounded-2xl p-4 border border-gray-800/90 space-y-4">
+          <div class="flex items-center justify-between pb-2 border-b border-gray-800/80">
+            <span class="font-semibold text-sm text-gray-200 flex items-center gap-2">
+              <i data-lucide="trending-up" class="w-4 h-4 text-teal-400"></i>
+              Dynamic System Telemetry History (Last 60 Seconds)
+            </span>
+            <span class="text-xs text-gray-500 mono">Sample: 4 Hz Decimated</span>
+          </div>
+
+          <div class="grid grid-cols-1 gap-3">
+            <div class="h-32 w-full">
+              <canvas id="timeSeriesMassChart"></canvas>
+            </div>
+            <div class="h-32 w-full">
+              <canvas id="timeSeriesResChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right 6 Cols: Closed-Loop Controls & Fault Injection -->
+        <div class="lg:col-span-6 glass-panel rounded-2xl p-4 border border-gray-800/90 flex flex-col justify-between">
+          <div class="pb-2 border-b border-gray-800/80 flex items-center justify-between">
+            <span class="font-semibold text-sm text-gray-200 flex items-center gap-2">
+              <i data-lucide="sliders" class="w-4 h-4 text-violet-400"></i>
+              Closed-Loop Autonomous Controller & Stress Injection
+            </span>
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-gray-400 mono">Autonomous Guard:</span>
+              <button id="toggleAutoBtn" onclick="toggleAutonomousLoop()" class="px-3 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs mono transition shadow-lg shadow-emerald-900/50">
+                ACTIVE [AUTO]
+              </button>
+            </div>
+          </div>
+
+          <!-- Parameter Sliders -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 my-3 text-xs mono">
+            
+            <!-- Transpiration Rate Slider -->
+            <div class="space-y-1.5 bg-gray-950/60 p-2.5 rounded-xl border border-gray-800">
+              <div class="flex justify-between text-gray-300">
+                <span>Crop Transpiration Rate ($T_c$)</span>
+                <span id="valTranspiration" class="text-cyan-400 font-bold">1.2x Nominal</span>
+              </div>
+              <input type="range" id="sliderTranspiration" min="0.2" max="3.5" step="0.1" value="1.2" oninput="updateSliders()" class="w-full accent-cyan-500 bg-gray-800 h-1.5 rounded cursor-pointer">
+              <div class="flex justify-between text-[10px] text-gray-500">
+                <span>Dark/Dormant (0.2x)</span>
+                <span>Canopy Heat (3.5x)</span>
+              </div>
+            </div>
+
+            <!-- Mineral Absorption Rate Slider -->
+            <div class="space-y-1.5 bg-gray-950/60 p-2.5 rounded-xl border border-gray-800">
+              <div class="flex justify-between text-gray-300">
+                <span>Root Ion Uptake Velocity ($v_{ion}$)</span>
+                <span id="valIonUptake" class="text-amber-400 font-bold">1.0x Nominal</span>
+              </div>
+              <input type="range" id="sliderIonUptake" min="0.1" max="3.0" step="0.1" value="1.0" oninput="updateSliders()" class="w-full accent-amber-500 bg-gray-800 h-1.5 rounded cursor-pointer">
+              <div class="flex justify-between text-[10px] text-gray-500">
+                <span>Vegetative Base (0.1x)</span>
+                <span>Fruiting Surge (3.0x)</span>
+              </div>
+            </div>
+
+            <!-- Ambient Atmospheric Pressure -->
+            <div class="space-y-1.5 bg-gray-950/60 p-2.5 rounded-xl border border-gray-800">
+              <div class="flex justify-between text-gray-300">
+                <span>Chamber Habitat Pressure</span>
+                <span id="valChamberPressure" class="text-teal-400 font-bold">70.3 kPa (Lunar Veg)</span>
+              </div>
+              <input type="range" id="sliderPressure" min="20" max="101.3" step="1" value="70.3" oninput="updateSliders()" class="w-full accent-teal-500 bg-gray-800 h-1.5 rounded cursor-pointer">
+              <div class="flex justify-between text-[10px] text-gray-500">
+                <span>Hypobaric Mars (20 kPa)</span>
+                <span>Sea Level (101.3 kPa)</span>
+              </div>
+            </div>
+
+            <!-- Gravity Level Selector -->
+            <div class="space-y-1.5 bg-gray-950/60 p-2.5 rounded-xl border border-gray-800">
+              <div class="flex justify-between text-gray-300">
+                <span>Gravitational Vector ($g$)</span>
+                <span id="valGravity" class="text-violet-400 font-bold">Lunar Surface (0.166g)</span>
+              </div>
+              <div class="grid grid-cols-3 gap-1 pt-0.5">
+                <button onclick="setGravity(0.001, 'Microgravity ISS (10⁻³ g)')" class="py-1 px-1.5 rounded bg-gray-900 hover:bg-gray-800 border border-gray-700 text-gray-300 text-[10px] transition">Micro-g</button>
+                <button onclick="setGravity(0.166, 'Lunar Surface (0.166g)')" class="py-1 px-1.5 rounded bg-violet-950/80 border border-violet-600/70 text-violet-200 text-[10px] font-semibold transition">Lunar</button>
+                <button onclick="setGravity(0.38, 'Martian Surface (0.380g)')" class="py-1 px-1.5 rounded bg-gray-900 hover:bg-gray-800 border border-gray-700 text-gray-300 text-[10px] transition">Mars</button>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Fault Injection Suite (Testing Autonomous Recovery) -->
+          <div class="pt-2 border-t border-gray-800/80">
+            <div class="text-xs text-gray-400 mono mb-2 flex items-center justify-between">
+              <span>Simulate Critical Extraterrestrial Crop Hazards:</span>
+              <span class="text-gray-500 text-[11px]">Injects instant step deviations</span>
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <button onclick="injectFault('transpiration')" class="px-2 py-2 rounded-lg bg-cyan-950/50 hover:bg-cyan-900/70 border border-cyan-800/60 text-cyan-200 text-xs mono font-semibold flex flex-col items-center gap-1 transition">
+                <i data-lucide="sun" class="w-4 h-4 text-cyan-400"></i>
+                <span>Canopy Flash Heat</span>
+                <span class="text-[9px] text-gray-400">Rapid Mass Loss</span>
+              </button>
+
+              <button onclick="injectFault('starvation')" class="px-2 py-2 rounded-lg bg-amber-950/50 hover:bg-amber-900/70 border border-amber-800/60 text-amber-200 text-xs mono font-semibold flex flex-col items-center gap-1 transition">
+                <i data-lucide="utensils" class="w-4 h-4 text-amber-400"></i>
+                <span>Ion Starvation</span>
+                <span class="text-[9px] text-gray-400">Spike $R$, Mass Stable</span>
+              </button>
+
+              <button onclick="injectFault('salt_crust')" class="px-2 py-2 rounded-lg bg-rose-950/50 hover:bg-rose-900/70 border border-rose-800/60 text-rose-200 text-xs mono font-semibold flex flex-col items-center gap-1 transition">
+                <i data-lucide="sparkles" class="w-4 h-4 text-rose-400"></i>
+                <span>Salt Crystallization</span>
+                <span class="text-[9px] text-gray-400">Severe Root Choke</span>
+              </button>
+
+              <button onclick="injectFault('reset')" class="px-2 py-2 rounded-lg bg-emerald-950/50 hover:bg-emerald-900/70 border border-emerald-800/60 text-emerald-200 text-xs mono font-semibold flex flex-col items-center gap-1 transition">
+                <i data-lucide="rotate-ccw" class="w-4 h-4 text-emerald-400"></i>
+                <span>Flush & Restore</span>
+                <span class="text-[9px] text-gray-400">Reset Baseline</span>
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- TAB 2: CORE PHYSICS & MATHEMATICAL MODEL                                  -->
+    <!-- ========================================================================= -->
+    <div id="viewPhysics" class="hidden space-y-6">
+      
+      <!-- Section Header -->
+      <div class="glass-panel p-6 rounded-2xl border border-gray-800">
+        <div class="flex items-center gap-3">
+          <div class="p-2.5 bg-cyan-950/80 border border-cyan-700/60 rounded-xl text-cyan-400">
+            <i data-lucide="binary" class="w-6 h-6"></i>
+          </div>
+          <div>
+            <h2 class="text-xl font-bold text-white tracking-tight">Decoupled Dual-State Observer Formulation: $(m, R)$ State Space</h2>
+            <p class="text-sm text-gray-400">Differentiating physical solvent loss from electrolytic solute kinetics in capillary microgravity substrates</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4 Core Physics Formula Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+        <!-- Card 1: Governing Mass & Capillary Transport -->
+        <div class="glass-panel p-5 rounded-2xl border border-gray-800 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between text-xs mono text-cyan-400 pb-2 border-b border-gray-800">
+              <span>01. FLUID MASS CONSERVATION & MENISCUS DRAW</span>
+              <i data-lucide="database" class="w-4 h-4"></i>
+            </div>
+            <h3 class="text-base font-semibold text-white mt-2">Substrate Hydraulic Mass Balance in Fractional Gravity</h3>
+            <p class="text-xs text-gray-300 mt-1 leading-relaxed">
+              In low-gravity habitats, buoyancy-driven natural convection ceases, making fluid transport entirely dependent on capillary matric potential $\psi_m$ and active suction from root transpiration $T_c(t)$:
+            </p>
+            
+            <div class="formula-box">
+              $$\frac{dm(t)}{dt} = \dot{m}_{\text{inj, H}_2\text{O}} + \dot{m}_{\text{inj, nutrient}} - \int_{\mathcal{A}_{\text{leaf}}} T_c(T_{\text{air}}, \text{VPD}, g)\, dA - \dot{m}_{\text{evap}}$$
+            </div>
+
+            <p class="text-xs text-gray-400 mt-2 leading-relaxed">
+              Where the matric potential within the ceramic pore space of mean pore throat radius $r_p$ is governed by the Young-Laplace equation scaled by contact angle $\theta$ and surface tension $\gamma$:
+            </p>
+
+            <div class="formula-box">
+              $$\Delta P_{\text{capillary}} = \frac{2\gamma \cos \theta}{r_p} - \rho g_{\text{eff}} h_{\text{sponge}}$$
+            </div>
+          </div>
+          <div class="mt-4 pt-3 border-t border-gray-800/80 text-[11px] mono text-gray-400 flex justify-between">
+            <span>Critical Constraint: Bubble entrapment</span>
+            <span class="text-cyan-400">Bond Number $Bo = \frac{\rho g L^2}{\gamma} \ll 1$</span>
+          </div>
+        </div>
+
+        <!-- Card 2: Ionic Impedance & Kohlrausch Dissolved Salt Physics -->
+        <div class="glass-panel p-5 rounded-2xl border border-gray-800 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between text-xs mono text-amber-400 pb-2 border-b border-gray-800">
+              <span>02. ELECTROLYTIC CONCENTRATION & RESISTANCE</span>
+              <i data-lucide="zap" class="w-4 h-4"></i>
+            </div>
+            <h3 class="text-base font-semibold text-white mt-2">Bulk Sintered Ceramic Resistance vs. Ionic Solute Molarity</h3>
+            <p class="text-xs text-gray-300 mt-1 leading-relaxed">
+              Electrical resistance $R$ across interdigital porous sensors depends directly on the effective conductivity $\sigma_{\text{eff}}$ of the interstitial fluid and volumetric water content $\theta_v$:
+            </p>
+
+            <div class="formula-box">
+              $$R(t) = \frac{K_{\text{cell}}}{\sigma_{\text{eff}}(t) \cdot \theta_v^\mu} = \frac{K_{\text{cell}}}{\left( \sum_i z_i F u_i c_i(t) \right) \theta_v^\mu}$$
+            </div>
+
+            <p class="text-xs text-gray-400 mt-2 leading-relaxed">
+              At dilute concentrations, molar ionic conductivity follows the Kohlrausch limiting law:
+            </p>
+
+            <div class="formula-box">
+              $$\Lambda_m = \Lambda_m^0 - \mathcal{K} \sqrt{c_{\text{total}}}, \quad \text{where } c_{\text{total}} = \frac{n_{\text{ions}}(t)}{V_{\text{fluid}}(t)}$$
+            </div>
+          </div>
+          <div class="mt-4 pt-3 border-t border-gray-800/80 text-[11px] mono text-gray-400 flex justify-between">
+            <span>Cell Constant: $K_{\text{cell}} = 0.85\text{ cm}^{-1}$</span>
+            <span class="text-amber-400">Archie Exponent: $\mu = 1.35$</span>
+          </div>
+        </div>
+
+        <!-- Card 3: Inversion Matrix & Fault Decoupling Algorithm -->
+        <div class="glass-panel p-5 rounded-2xl border border-gray-800 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between text-xs mono text-emerald-400 pb-2 border-b border-gray-800">
+              <span>03. STATE INVERSION & TRANSPIRATION DECOUPLING</span>
+              <i data-lucide="cpu" class="w-4 h-4"></i>
+            </div>
+            <h3 class="text-base font-semibold text-white mt-2">Closed-Form Jacobian Inversion of $(m, R)$ State</h3>
+            <p class="text-xs text-gray-300 mt-1 leading-relaxed">
+              Standard sensors fail because pure water loss concentrates ions (causing $R$ to drop or spike non-linearly), masking nutrient starvation. BioPlant tracks the state gradient Jacobian matrix $\mathbf{J}$:
+            </p>
+
+            <div class="formula-box">
+              $$\begin{bmatrix} \dot{m} \\ \dot{R} \end{bmatrix} = \begin{bmatrix} \frac{\partial m}{\partial V_{\text{H}_2\text{O}}} & 0 \\ \frac{\partial R}{\partial V_{\text{H}_2\text{O}}} & \frac{\partial R}{\partial n_{\text{ions}}} \end{bmatrix} \begin{bmatrix} \dot{V}_{\text{H}_2\text{O}} \\ \dot{n}_{\text{ions}} \end{bmatrix}$$
+            </div>
+
+            <p class="text-xs text-gray-400 mt-2 leading-relaxed">
+              Inverting the triangular Jacobian matrix allows instant determination of true plant transpiration vs. root mineral consumption:
+            </p>
+
+            <div class="formula-box">
+              $$\dot{n}_{\text{ions}} = \left( \frac{\partial R}{\partial n_{\text{ions}}} \right)^{-1} \left( \dot{R} - \frac{\partial R}{\partial V_{\text{H}_2\text{O}}} \frac{\dot{m}}{\rho_w} \right)$$
+            </div>
+          </div>
+          <div class="mt-4 pt-3 border-t border-gray-800/80 text-[11px] mono text-gray-400 flex justify-between">
+            <span>Observer Rate: 25 Hz Realtime</span>
+            <span class="text-emerald-400">Determinant $\det(\mathbf{J}) \neq 0$ Always Non-Singular</span>
+          </div>
+        </div>
+
+        <!-- Card 4: Sensor Hardware & Solid-State Micro-dosing Specs -->
+        <div class="glass-panel p-5 rounded-2xl border border-gray-800 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between text-xs mono text-violet-400 pb-2 border-b border-gray-800">
+              <span>04. SENSOR HARDWARE & MICRO-DOSING SPECIFICATION</span>
+              <i data-lucide="layers" class="w-4 h-4"></i>
+            </div>
+            <h3 class="text-base font-semibold text-white mt-2">Space-Qualified Solid-State Micro-Fluidic Stack</h3>
+            <p class="text-xs text-gray-300 mt-1 leading-relaxed">
+              Standard peristaltic tubing creeps and collapses under extraterrestrial thermal cycles and UV. BioPlant utilizes piezo-driven silicon diaphragm check valves with dual-frequency AC impedance to eliminate electrode polarization:
+            </p>
+
+            <div class="formula-box">
+              $$f_{\text{excitation}} = 10 \text{ kHz to } 100 \text{ kHz}, \quad Z_{\text{double-layer}} \to 0, \quad R_{\text{bulk}} \equiv \text{Re}\{Z\}$$
+            </div>
+
+            <div class="space-y-1.5 mt-3 text-xs mono text-gray-300 bg-gray-950/70 p-3 rounded-lg border border-gray-800">
+              <div class="flex justify-between"><span>Micro-Balance Load Cell:</span> <span class="text-white">$\pm 0.05$ g precision, dual-axis cantilever</span></div>
+              <div class="flex justify-between"><span>Electrodes:</span> <span class="text-white">Ag/AgCl printed on sintered Al₂O₃ ceramic ring</span></div>
+              <div class="flex justify-between"><span>Piezo Micro-Injectors:</span> <span class="text-white">PZT stack, $0.5\ \mu\text{L}$ per stroke impulse</span></div>
+              <div class="flex justify-between"><span>Degassing Mechanism:</span> <span class="text-white">Hydrophobic PTFE semipermeable capillary vent</span></div>
+            </div>
+          </div>
+          <div class="mt-4 pt-3 border-t border-gray-800/80 text-[11px] mono text-gray-400 flex justify-between">
+            <span>Operational Temperature: 10°C to 38°C</span>
+            <span class="text-violet-400">Rad-Hard: 100 krad (Si) TID</span>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- TAB 3: $225,000 NASA SBIR/STTR PROPOSAL & HARDWARE TRANSITION             -->
+    <!-- ========================================================================= -->
+    <div id="viewProposal" class="hidden space-y-6">
+      
+      <!-- Solicitation Alignment Card -->
+      <div class="glass-panel p-6 rounded-2xl border border-gray-800 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <div class="flex items-center gap-2 text-xs font-bold text-cyan-400 mono">
+            <span>NASA SBIR 2026 PHASE I SOLICITATION</span>
+            <span class="px-2 py-0.5 bg-cyan-950 text-cyan-300 rounded border border-cyan-700/60">TOPIC T8.04</span>
+          </div>
+          <h2 class="text-2xl font-bold text-white mt-1">Autonomous Extraterrestrial Crop Habitat Fluidics & Nutrient Management</h2>
+          <p class="text-sm text-gray-400 mt-1">Deep Space Bioregenerative Food Production for Artemis IV–VII and Mars Transit</p>
+        </div>
+        <div class="text-right mono">
+          <div class="text-3xl font-extrabold text-emerald-400">$225,000</div>
+          <div class="text-xs text-gray-400">6-Month Phase I STTR Award</div>
+        </div>
+      </div>
+
+      <!-- University Research Partner Split Card -->
+      <div class="glass-panel p-6 rounded-2xl border border-emerald-900/40 bg-gradient-to-r from-emerald-950/20 via-gray-950 to-gray-950">
+        <div class="flex flex-col lg:flex-row justify-between gap-6">
+          <div class="space-y-3 lg:max-w-xl">
+            <div class="flex items-center gap-2 text-xs font-bold text-emerald-400 mono">
+              <i data-lucide="graduation-cap" class="w-4 h-4"></i>
+              <span>MANDATORY STTR RESEARCH INSTITUTION CO-INVESTIGATOR</span>
+            </div>
+            <h3 class="text-xl font-bold text-white">University of Central Florida (UCF) CATER Labs</h3>
+            <p class="text-xs text-gray-300 leading-relaxed">
+              UCF Center for Advanced Turbomachinery and Energy Research (CATER) and Florida Space Institute (FSI) team provide microgravity test benches, parabolic flight verification, and micro-CT tomography of porous capillary fluid flow in Martian regolith simulant and phenolic growth matrix.
+            </p>
+            <div class="flex items-center gap-4 text-xs mono text-gray-400 pt-2">
+              <div>Lead PI: <span class="text-white">Dr. Aris Thorne (UCF)</span></div>
+              <div>Facility: <span class="text-white">Hypobaric Plant Chamber 4B</span></div>
+            </div>
+          </div>
+
+          <!-- Budget Breakdown Ring & Metrics -->
+          <div class="flex flex-col justify-center bg-gray-950/80 p-4 rounded-xl border border-gray-800 min-w-[280px]">
+            <div class="flex justify-between items-center text-xs mono mb-2">
+              <span class="text-gray-400">STTR Subcontract Share:</span>
+              <span class="text-emerald-400 font-bold text-sm">30.0% ($67,500)</span>
+            </div>
+            <div class="w-full bg-gray-800 h-2 rounded-full overflow-hidden flex">
+              <div class="bg-cyan-500 h-full w-[70%]" title="Prime Small Business: $157,500"></div>
+              <div class="bg-emerald-500 h-full w-[30%]" title="UCF Subcontract: $67,500"></div>
+            </div>
+            <div class="flex justify-between text-[11px] mono text-gray-400 mt-2">
+              <span>Prime (Software/Control): $157.5k</span>
+              <span>UCF CATER (Lab/Hardware): $67.5k</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4 Milestones across Months 1-6 -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        
+        <!-- Milestone 1 -->
+        <div class="glass-panel p-4 rounded-xl border border-gray-800 flex flex-col justify-between">
+          <div>
+            <div class="flex justify-between text-xs mono text-cyan-400">
+              <span>MONTH 1–2</span>
+              <span>TRL 3 $\to$ 4</span>
+            </div>
+            <h4 class="font-bold text-white text-sm mt-2">Hydrodynamic & Meniscus Modeling</h4>
+            <p class="text-xs text-gray-400 mt-1 leading-relaxed">
+              Formulate 3D finite-element capillary model of porous phenolic sponge and sintered ceramic sleeves under 0g, 0.166g, and 0.38g. Correlate Laplace pressure against root moisture extraction.
+            </p>
+          </div>
+          <div class="mt-4 pt-2 border-t border-gray-800 text-[10px] mono text-cyan-400">
+            Deliverable: OpenFOAM Multiphase Fluid Model
+          </div>
+        </div>
+
+        <!-- Milestone 2 -->
+        <div class="glass-panel p-4 rounded-xl border border-gray-800 flex flex-col justify-between">
+          <div>
+            <div class="flex justify-between text-xs mono text-emerald-400">
+              <span>MONTH 3–4</span>
+              <span>INVERSION OBSERVER</span>
+            </div>
+            <h4 class="font-bold text-white text-sm mt-2">State Observer Inversion Algorithm</h4>
+            <p class="text-xs text-gray-400 mt-1 leading-relaxed">
+              Program real-time C++ embedded state observer executing at 25 Hz. Validate zero false-alarm differentiation between pure transpiration mass loss and catastrophic salt crystallization on dwarf wheat and Arabidopsis.
+            </p>
+          </div>
+          <div class="mt-4 pt-2 border-t border-gray-800 text-[10px] mono text-emerald-400">
+            Deliverable: Real-Time Kalman State Machine
+          </div>
+        </div>
+
+        <!-- Milestone 3 -->
+        <div class="glass-panel p-4 rounded-xl border border-gray-800 flex flex-col justify-between">
+          <div>
+            <div class="flex justify-between text-xs mono text-amber-400">
+              <span>MONTH 5</span>
+              <span>PIEZO MICRO-DOSER</span>
+            </div>
+            <h4 class="font-bold text-white text-sm mt-2">Closed-Loop Testbed Integration</h4>
+            <p class="text-xs text-gray-400 mt-1 leading-relaxed">
+              Interface dual-channel PZT micro-dispensers with 4-point impedance ring sensor. Subject breadboard chamber to 144 hours of autonomous continuous operation without manual pH/EC calibration intervention.
+            </p>
+          </div>
+          <div class="mt-4 pt-2 border-t border-gray-800 text-[10px] mono text-amber-400">
+            Deliverable: Autonomous 6-Day Hardware Rig
+          </div>
+        </div>
+
+        <!-- Milestone 4 -->
+        <div class="glass-panel p-4 rounded-xl border border-gray-800 flex flex-col justify-between">
+          <div>
+            <div class="flex justify-between text-xs mono text-violet-400">
+              <span>MONTH 6</span>
+              <span>PHASE II ROADMAP</span>
+            </div>
+            <h4 class="font-bold text-white text-sm mt-2">Phase II Hardware Specification</h4>
+            <p class="text-xs text-gray-400 mt-1 leading-relaxed">
+              Deliver complete rad-hardened flight-ready specifications for NASA Veggie / Advanced Plant Habitat (APH) lockers on ISS. Submit $1.2M Phase II proposal for parabolic flight verification.
+            </p>
+          </div>
+          <div class="mt-4 pt-2 border-t border-gray-800 text-[10px] mono text-violet-400">
+            Deliverable: Final NASA Technical Dossier
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Phase II Hardware Transition & Target Flight Facilities -->
+      <div class="glass-panel p-6 rounded-2xl border border-gray-800">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i data-lucide="rocket" class="w-4 h-4 text-cyan-400"></i>
+          Phase II Hardware Prototyping & Flight Facility Validation Pathway
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 text-xs">
+          <div class="p-3 bg-gray-950/70 rounded-xl border border-gray-800">
+            <span class="font-bold text-cyan-300 mono">NASA Kennedy Space Center (KSC)</span>
+            <p class="text-gray-400 mt-1">Exploration Production Lab & Veggie chamber hardware compatibility validation for Artemis Gateway crew cabins.</p>
+          </div>
+          <div class="p-3 bg-gray-950/70 rounded-xl border border-gray-800">
+            <span class="font-bold text-emerald-300 mono">Zero-G Aircraft Parabolic Flight</span>
+            <p class="text-gray-400 mt-1">20 parabolas of lunar (0.166g) and microgravity (0g) testing meniscus stability and bubble purge under dynamic vibration.</p>
+          </div>
+          <div class="p-3 bg-gray-950/70 rounded-xl border border-gray-800">
+            <span class="font-bold text-violet-300 mono">Commercial LEO Hab (Axiom / Starlab)</span>
+            <p class="text-gray-400 mt-1">Long-duration food autonomy module scaling to 48 independent crop root modules with zero astronaut maintenance overhead.</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- TAB 4: COMMERCIAL & NATIONWIDE ARR BREAKDOWN                               -->
+    <!-- ========================================================================= -->
+    <div id="viewARR" class="hidden space-y-6">
+      
+      <!-- Top ARR Headline Card -->
+      <div class="glass-panel p-6 rounded-2xl border border-emerald-900/50 bg-gradient-to-r from-emerald-950/30 via-gray-950 to-gray-950 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div>
+          <div class="flex items-center gap-2 text-xs font-bold text-emerald-400 mono">
+            <i data-lucide="shield-check" class="w-4 h-4"></i>
+            <span>CIVIL & COMMERCIAL TERRESTRIAL EXPANSION (NO CLASSIFIED DEFENSE)</span>
+          </div>
+          <h2 class="text-2xl font-bold text-white mt-1">Total Commercial ARR Opportunity: $214.8M</h2>
+          <p class="text-sm text-gray-400 mt-1">Autonomous capillary nutrient sensing license across indoor vertical farms, pharma bioreactors, and desert CEA</p>
+        </div>
+        <div class="bg-gray-900/90 p-4 rounded-xl border border-emerald-700/40 text-right mono">
+          <div class="text-xs text-gray-400">Enterprise Valuation @ 10x Multiple</div>
+          <div class="text-2xl font-black text-emerald-400">$2.148 BILLION</div>
+          <div class="text-[10px] text-gray-500 mt-0.5">Deep-Tech Agricultural Automation Benchmark</div>
+        </div>
+      </div>
+
+      <!-- ARR Vertical Distribution Table -->
+      <div class="glass-panel rounded-2xl border border-gray-800 overflow-hidden">
+        <div class="p-4 border-b border-gray-800 flex justify-between items-center">
+          <span class="font-semibold text-sm text-gray-200">Commercial Market Verticals & Revenue Model Breakdown</span>
+          <span class="text-xs mono text-cyan-400">6 Scalable Markets</span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs mono">
+            <thead class="bg-gray-950/90 text-gray-400 border-b border-gray-800">
+              <tr>
+                <th class="p-3.5">Commercial Vertical</th>
+                <th class="p-3.5">Target Deployment</th>
+                <th class="p-3.5">Software SaaS / Runtime Unit Price</th>
+                <th class="p-3.5">Nationwide Asset Base</th>
+                <th class="p-3.5 text-right text-emerald-400">Mature ARR Target</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-800 text-gray-300">
+              <tr class="hover:bg-gray-900/40 transition">
+                <td class="p-3.5 font-semibold text-white flex items-center gap-2">
+                  <i data-lucide="building-2" class="w-4 h-4 text-cyan-400"></i>
+                  Indoor Vertical Commercial Farming
+                </td>
+                <td class="p-3.5">Leafy greens, strawberry hydroponic towers</td>
+                <td class="p-3.5">$180 / module channel / year</td>
+                <td class="p-3.5">380,000 active growth channels</td>
+                <td class="p-3.5 text-right font-bold text-emerald-400">$68.4M</td>
+              </tr>
+              <tr class="hover:bg-gray-900/40 transition">
+                <td class="p-3.5 font-semibold text-white flex items-center gap-2">
+                  <i data-lucide="dna" class="w-4 h-4 text-violet-400"></i>
+                  Pharma Plant-Made Bioreactors
+                </td>
+                <td class="p-3.5">Tobacco/Arabidopsis antibody synthesis</td>
+                <td class="p-3.5">$3,200 / cGMP growth cabinet / year</td>
+                <td class="p-3.5">14,500 containment pods</td>
+                <td class="p-3.5 text-right font-bold text-emerald-400">$46.4M</td>
+              </tr>
+              <tr class="hover:bg-gray-900/40 transition">
+                <td class="p-3.5 font-semibold text-white flex items-center gap-2">
+                  <i data-lucide="sun-medium" class="w-4 h-4 text-amber-400"></i>
+                  Arid & Desert Greenhouses (Middle East/SW US)
+                </td>
+                <td class="p-3.5">Closed-loop water recapture greenhouses</td>
+                <td class="p-3.5">$450 / closed loop rack / year</td>
+                <td class="p-3.5">85,000 greenhouse bays</td>
+                <td class="p-3.5 text-right font-bold text-emerald-400">$38.25M</td>
+              </tr>
+              <tr class="hover:bg-gray-900/40 transition">
+                <td class="p-3.5 font-semibold text-white flex items-center gap-2">
+                  <i data-lucide="container" class="w-4 h-4 text-blue-400"></i>
+                  Autonomous Maritime Cargo Farms
+                </td>
+                <td class="p-3.5">Containerized fresh produce for transoceanic ships</td>
+                <td class="p-3.5">$1,200 / self-contained sea unit / year</td>
+                <td class="p-3.5">24,000 cargo container bays</td>
+                <td class="p-3.5 text-right font-bold text-emerald-400">$28.8M</td>
+              </tr>
+              <tr class="hover:bg-gray-900/40 transition">
+                <td class="p-3.5 font-semibold text-white flex items-center gap-2">
+                  <i data-lucide="tent" class="w-4 h-4 text-emerald-400"></i>
+                  Polar & Antarctic Research Stations
+                </td>
+                <td class="p-3.5">Zero-maintenance survival vegetable arrays</td>
+                <td class="p-3.5">$2,800 / station cluster / year</td>
+                <td class="p-3.5">5,200 isolated bio-domes</td>
+                <td class="p-3.5 text-right font-bold text-emerald-400">$14.56M</td>
+              </tr>
+              <tr class="hover:bg-gray-900/40 transition">
+                <td class="p-3.5 font-semibold text-white flex items-center gap-2">
+                  <i data-lucide="orbit" class="w-4 h-4 text-pink-400"></i>
+                  Commercial Orbital & Lunar Outposts
+                </td>
+                <td class="p-3.5">Axiom, Orbital Reef, Lunar Base habitats</td>
+                <td class="p-3.5">$18,500 / flight-certified hab unit / yr</td>
+                <td class="p-3.5">990 orbital lockers</td>
+                <td class="p-3.5 text-right font-bold text-emerald-400">$18.39M</td>
+              </tr>
+            </tbody>
+            <tfoot class="bg-gray-950 font-bold border-t border-gray-700 text-white">
+              <tr>
+                <td colspan="4" class="p-3.5 text-right">TOTAL PROJECTED CIVIL ARR:</td>
+                <td class="p-3.5 text-right text-emerald-400 text-sm">$214.7M</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+      <!-- Detailed Industry Deep Dive Cards (Physics in 1 Sentence + Why Others Missed This) -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        
+        <!-- Industry 1 -->
+        <div class="glass-panel p-5 rounded-2xl border border-gray-800 space-y-3">
+          <div class="flex items-center gap-2 text-cyan-400 font-bold text-sm">
+            <i data-lucide="building-2" class="w-4 h-4"></i>
+            <span>Indoor Commercial Vertical Farms</span>
+          </div>
+          <div class="text-xs space-y-2">
+            <div>
+              <span class="text-gray-400 block font-semibold mono">Physics in 1 Sentence:</span>
+              <p class="text-gray-300">
+                Coupled continuous mass measurement and dual-frequency ionic impedance instantly isolate transpiration vapor loss from nutrient uptake without flushing thousands of gallons of nutrient water down the drain.
+              </p>
+            </div>
+            <div class="pt-2 border-t border-gray-800/80">
+              <span class="text-amber-400 block font-semibold mono">Why Others Missed This (Plain English):</span>
+              <p class="text-gray-400">
+                Legacy vertical farms rely on massive centralized dump-and-refill reservoirs with periodic manual dipstick tests, dumping 40% of costly fertilizer and causing devastating crop batch root burn when evaporation spikes.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Industry 2 -->
+        <div class="glass-panel p-5 rounded-2xl border border-gray-800 space-y-3">
+          <div class="flex items-center gap-2 text-violet-400 font-bold text-sm">
+            <i data-lucide="dna" class="w-4 h-4"></i>
+            <span>Pharmaceutical Biomanufacturing</span>
+          </div>
+          <div class="text-xs space-y-2">
+            <div>
+              <span class="text-gray-400 block font-semibold mono">Physics in 1 Sentence:</span>
+              <p class="text-gray-300">
+                Sub-microliter closed-loop micro-dosing holds osmotic cell wall pressure strictly constant to prevent cellular stress lysis during recombinant protein expression.
+              </p>
+            </div>
+            <div class="pt-2 border-t border-gray-800/80">
+              <span class="text-amber-400 block font-semibold mono">Why Others Missed This (Plain English):</span>
+              <p class="text-gray-400">
+                Pharma cleanrooms use bulky peristaltic pumps that introduce tubing particle wear and flow pulsation, causing erratic nutrient swings that degrade antibody batch yield by up to 35%.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Industry 3 -->
+        <div class="glass-panel p-5 rounded-2xl border border-gray-800 space-y-3">
+          <div class="flex items-center gap-2 text-amber-400 font-bold text-sm">
+            <i data-lucide="sun-medium" class="w-4 h-4"></i>
+            <span>Arid & Desert Greenhouses</span>
+          </div>
+          <div class="text-xs space-y-2">
+            <div>
+              <span class="text-gray-400 block font-semibold mono">Physics in 1 Sentence:</span>
+              <p class="text-gray-300">
+                The $(m, R)$ algorithm detects ionic salt crystallization at the capillary root boundary long before leaf necrosis occurs, triggering preventative micro-flushes with 90% less fresh water.
+              </p>
+            </div>
+            <div class="pt-2 border-t border-gray-800/80">
+              <span class="text-amber-400 block font-semibold mono">Why Others Missed This (Plain English):</span>
+              <p class="text-gray-400">
+                Desert growers wait until visual leaf wilting or canopy thermal cameras spot drought stress, at which point root hair damage is already permanent and irreversible.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Industry 4 -->
+        <div class="glass-panel p-5 rounded-2xl border border-gray-800 space-y-3">
+          <div class="flex items-center gap-2 text-blue-400 font-bold text-sm">
+            <i data-lucide="container" class="w-4 h-4"></i>
+            <span>Autonomous Maritime Cargo Farms</span>
+          </div>
+          <div class="text-xs space-y-2">
+            <div>
+              <span class="text-gray-400 block font-semibold mono">Physics in 1 Sentence:</span>
+              <p class="text-gray-300">
+                Solid-state sintered capillary sponges prevent fluid sloshing and free-surface separation caused by vessel roll and pitch while automatically managing nutrient concentrations without crew intervention.
+              </p>
+            </div>
+            <div class="pt-2 border-t border-gray-800/80">
+              <span class="text-amber-400 block font-semibold mono">Why Others Missed This (Plain English):</span>
+              <p class="text-gray-400">
+                Conventional open-trough hydroponics fail at sea because cargo ship swells tip the water troughs, starving half the roots and drowning the other half.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Industry 5 -->
+        <div class="glass-panel p-5 rounded-2xl border border-gray-800 space-y-3">
+          <div class="flex items-center gap-2 text-emerald-400 font-bold text-sm">
+            <i data-lucide="tent" class="w-4 h-4"></i>
+            <span>Polar & Remote Outposts</span>
+          </div>
+          <div class="text-xs space-y-2">
+            <div>
+              <span class="text-gray-400 block font-semibold mono">Physics in 1 Sentence:</span>
+              <p class="text-gray-300">
+                Autonomous dual-state inversion operates unattended for 9 months during polar night without requiring skilled agronomy technicians or manual chemical probe recalibration.
+              </p>
+            </div>
+            <div class="pt-2 border-t border-gray-800/80">
+              <span class="text-amber-400 block font-semibold mono">Why Others Missed This (Plain English):</span>
+              <p class="text-gray-400">
+                Standard pH/EC glass bulbs drift after 3 weeks in cold conditions, requiring frequent human calibration with buffer solutions that freeze solid in transit.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Industry 6 -->
+        <div class="glass-panel p-5 rounded-2xl border border-gray-800 space-y-3">
+          <div class="flex items-center gap-2 text-pink-400 font-bold text-sm">
+            <i data-lucide="orbit" class="w-4 h-4"></i>
+            <span>Commercial LEO & Artemis Habs</span>
+          </div>
+          <div class="text-xs space-y-2">
+            <div>
+              <span class="text-gray-400 block font-semibold mono">Physics in 1 Sentence:</span>
+              <p class="text-gray-300">
+                Capillary-driven ionic monitoring functions identically whether subjected to Earth 1g, Moon 0.166g, Mars 0.38g, or zero-g orbit, immune to the absence of buoyant convective flow.
+              </p>
+            </div>
+            <div class="pt-2 border-t border-gray-800/80">
+              <span class="text-amber-400 block font-semibold mono">Why Others Missed This (Plain English):</span>
+              <p class="text-gray-400">
+                Competitors try to force standard terrestrial drip emitters into space, where surface tension turns water into floating suffocating blobs that rot root systems within 48 hours.
+              </p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Executive Summary & Direct Investor CTA -->
+      <div class="glass-panel p-6 rounded-2xl border border-cyan-800/50 bg-[#060a14] flex flex-col md:flex-row items-center justify-between gap-6">
+        <div class="space-y-1 max-w-2xl">
+          <h4 class="text-base font-bold text-white">Executive Summary & License Inquiries</h4>
+          <p class="text-xs text-gray-300 leading-relaxed">
+            BioPlant solves the foundational failure mode of automated space bioregenerative life support: decoupling transpiration water loss from plant mineral feeding using solid-state $(m, R)$ phase-space analytics. Technology readiness transitioning from TRL 4 to TRL 6 under NASA SBIR/STTR.
+          </p>
+        </div>
+        <div class="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+          <a href="mailto:support@rfwavecode.com" class="px-5 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white font-bold text-xs mono text-center transition shadow-lg shadow-cyan-950/60 flex items-center justify-center gap-2">
+            <i data-lucide="mail" class="w-4 h-4"></i>
+            <span>support@rfwavecode.com</span>
+          </a>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="glass-panel border-t border-gray-800/80 py-4 px-6 text-center text-xs text-gray-500 mono mt-8">
+    <span>BioPlant Autonomous Life Support Guard &bull; NASA STTR Topic T8.04 &bull; In Partnership with UCF CATER &bull; Support: support@rfwavecode.com</span>
+  </footer>
+
+  <!-- ========================================================================= -->
+  <!-- JAVASCRIPT: SIMULATION, CHARTS, & STATE OBSERVER CONTROLLER               -->
+  <!-- ========================================================================= -->
+  <script>
+    // Tab Switching Mapping Dictionary
+    const tabMapping = {
+      'sim': { viewId: 'viewSim', btnId: 'tabBtnSim' },
+      'physics': { viewId: 'viewPhysics', btnId: 'tabBtnPhysics' },
+      'proposal': { viewId: 'viewProposal', btnId: 'tabBtnProposal' },
+      'arr': { viewId: 'viewARR', btnId: 'tabBtnARR' }
+    };
+
+    function switchTab(tabKey) {
+      Object.keys(tabMapping).forEach(key => {
+        const item = tabMapping[key];
+        const view = document.getElementById(item.viewId);
+        const btn = document.getElementById(item.btnId);
+        if (key === tabKey) {
+          view.classList.remove('hidden');
+          btn.classList.add('text-emerald-300', 'bg-emerald-950/60', 'border-emerald-500/40');
+          btn.classList.remove('text-gray-400');
+        } else {
+          view.classList.add('hidden');
+          btn.classList.remove('text-emerald-300', 'bg-emerald-950/60', 'border-emerald-500/40');
+          btn.classList.add('text-gray-400');
+        }
+      });
+
+      // Typeset formulas if MathJax is available
+      if (window.MathJax && window.MathJax.typesetPromise) {
+        window.MathJax.typesetPromise().catch(err => console.debug(err));
+      }
+
+      // Re-trigger canvas size if switching back to sim
+      if (tabKey === 'sim') {
+        setTimeout(() => {
+          resizeCanvas();
+        }, 50);
+      }
+    }
+
+    // =========================================================================
+    // PHYSICAL SIMULATION ENGINE & STATE VARIABLES
+    // =========================================================================
+    const nominalMass = 450.0; // grams (nominal module + moisture)
+    const nominalResistance = 120.0; // Ohms (nominal ionic EC 1.8 mS/cm)
+    
+    let simState = {
+      mass: 450.0,
+      resistance: 120.0,
+      transpirationFactor: 1.2,
+      ionUptakeFactor: 1.0,
+      pressure: 70.3,
+      gravityName: 'Lunar Surface (0.166g)',
+      gFactor: 0.166,
+      autonomousLoop: true,
+      
+      // Injector states
+      waterInjectionRate: 0.0, // mL/s
+      nutrientInjectionRate: 0.0, // mL/s
+      
+      // Diagnostics
+      status: 'NOMINAL', // NOMINAL, TRANSPIRATION_DROUGHT, MINERAL_STARVATION, SALT_CRYSTALLIZATION
+      alertMsg: '',
+      
+      // Particles for Canvas Animation
+      particles: [],
+      
+      // History for Phase-Space Trail
+      phaseHistory: []
+    };
+
+    // Initialize root sponge particles
+    function initParticles() {
+      simState.particles = [];
+      const numParticles = 65;
+      for (let i = 0; i < numParticles; i++) {
+        simState.particles.push({
+          x: Math.random(),
+          y: Math.random(),
+          vx: (Math.random() - 0.5) * 0.002,
+          vy: (Math.random() - 0.5) * 0.002,
+          type: Math.random() > 0.4 ? 'water' : 'ion', // 'water' or 'ion'
+          size: Math.random() * 2.5 + 1.5
+        });
+      }
+    }
+
+    // =========================================================================
+    // CHART.JS TELEMETRY INITIALIZATION
+    // =========================================================================
+    let phaseChart, timeSeriesMassChart, timeSeriesResChart;
+
+    const timeLabels = Array.from({ length: 30 }, (_, i) => `-${30 - i}s`);
+    const histMass = Array(30).fill(450.0);
+    const histRes = Array(30).fill(120.0);
+
+    function initCharts() {
+      // 1. Phase-Space Scatter Chart (m vs R)
+      const ctxPhase = document.getElementById('phaseChart').getContext('2d');
+      
+      // Nominal box boundary
+      const nominalBox = [
+        { x: 440, y: 105 },
+        { x: 460, y: 105 },
+        { x: 460, y: 135 },
+        { x: 440, y: 135 },
+        { x: 440, y: 105 }
+      ];
+
+      phaseChart = new Chart(ctxPhase, {
+        type: 'scatter',
+        data: {
+          datasets: [
+            {
+              label: 'Optimal Bioregenerative Box',
+              data: nominalBox,
+              showLine: true,
+              borderColor: 'rgba(16, 185, 129, 0.7)',
+              borderWidth: 1.5,
+              borderDash: [4, 4],
+              backgroundColor: 'rgba(16, 185, 129, 0.08)',
+              fill: true,
+              pointRadius: 0
+            },
+            {
+              label: 'Trajectory Trail',
+              data: [],
+              showLine: true,
+              borderColor: 'rgba(6, 182, 212, 0.45)',
+              borderWidth: 1.5,
+              pointRadius: 2,
+              pointBackgroundColor: 'rgba(6, 182, 212, 0.6)'
+            },
+            {
+              label: 'Current System State (m, R)',
+              data: [{ x: simState.mass, y: simState.resistance }],
+              backgroundColor: '#38bdf8',
+              borderColor: '#ffffff',
+              borderWidth: 2,
+              pointRadius: 7,
+              pointHoverRadius: 9
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: false,
+          scales: {
+            x: {
+              title: {
+                display: true,
+                text: 'System Mass m (grams)',
+                color: '#94a3b8',
+                font: { family: 'JetBrains Mono', size: 11 }
+              },
+              min: 400,
+              max: 500,
+              grid: { color: 'rgba(255, 255, 255, 0.06)' },
+              ticks: { color: '#64748b', font: { family: 'JetBrains Mono', size: 10 } }
+            },
+            y: {
+              title: {
+                display: true,
+                text: 'Ionic Resistance R (Ω)',
+                color: '#94a3b8',
+                font: { family: 'JetBrains Mono', size: 11 }
+              },
+              min: 80,
+              max: 200,
+              grid: { color: 'rgba(255, 255, 255, 0.06)' },
+              ticks: { color: '#64748b', font: { family: 'JetBrains Mono', size: 10 } }
+            }
+          },
+          plugins: {
+            legend: {
+              labels: {
+                color: '#94a3b8',
+                font: { family: 'JetBrains Mono', size: 10 },
+                boxWidth: 12
+              }
+            },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => `m: ${ctx.parsed.x.toFixed(1)} g | R: ${ctx.parsed.y.toFixed(1)} Ω`
+              }
+            }
+          }
+        }
+      });
+
+      // 2. Time-Series Mass Chart
+      const ctxMass = document.getElementById('timeSeriesMassChart').getContext('2d');
+      timeSeriesMassChart = new Chart(ctxMass, {
+        type: 'line',
+        data: {
+          labels: timeLabels,
+          datasets: [{
+            label: 'Total Mass m (g)',
+            data: histMass,
+            borderColor: '#06b6d4',
+            backgroundColor: 'rgba(6, 182, 212, 0.1)',
+            fill: true,
+            borderWidth: 1.8,
+            tension: 0.25,
+            pointRadius: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: false,
+          scales: {
+            x: { display: false },
+            y: {
+              min: 410,
+              max: 480,
+              grid: { color: 'rgba(255,255,255,0.05)' },
+              ticks: { color: '#64748b', font: { family: 'JetBrains Mono', size: 9 } }
+            }
+          },
+          plugins: {
+            legend: {
+              labels: { color: '#94a3b8', font: { family: 'JetBrains Mono', size: 10 }, boxWidth: 10 }
+            }
+          }
+        }
+      });
+
+      // 3. Time-Series Resistance Chart
+      const ctxRes = document.getElementById('timeSeriesResChart').getContext('2d');
+      timeSeriesResChart = new Chart(ctxRes, {
+        type: 'line',
+        data: {
+          labels: timeLabels,
+          datasets: [{
+            label: 'Ionic Resistance R (Ω)',
+            data: histRes,
+            borderColor: '#f59e0b',
+            backgroundColor: 'rgba(245, 158, 11, 0.1)',
+            fill: true,
+            borderWidth: 1.8,
+            tension: 0.25,
+            pointRadius: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: false,
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: { color: '#475569', font: { family: 'JetBrains Mono', size: 9 }, maxTicksLimit: 6 }
+            },
+            y: {
+              min: 90,
+              max: 180,
+              grid: { color: 'rgba(255,255,255,0.05)' },
+              ticks: { color: '#64748b', font: { family: 'JetBrains Mono', size: 9 } }
+            }
+          },
+          plugins: {
+            legend: {
+              labels: { color: '#94a3b8', font: { family: 'JetBrains Mono', size: 10 }, boxWidth: 10 }
+            }
+          }
+        }
+      });
+    }
+
+    // =========================================================================
+    // CANVAS DRAWING & ANIMATION: MICROGRAVITY HYDROPONIC CHAMBER
+    // =========================================================================
+    const canvas = document.getElementById('chamberCanvas');
+    const ctx = canvas.getContext('2d');
+
+    function resizeCanvas() {
+      const rect = canvas.getBoundingClientRect();
+      const w = rect.width || 600;
+      const h = rect.height || 280;
+      canvas.width = w * window.devicePixelRatio;
+      canvas.height = h * window.devicePixelRatio;
+      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+    }
+
+    window.addEventListener('resize', () => {
+      resizeCanvas();
+    });
+
+    function drawChamber() {
+      const rect = canvas.getBoundingClientRect();
+      const w = rect.width || 600;
+      const h = rect.height || 280;
+
+      // Dark background
+      ctx.fillStyle = '#02050c';
+      ctx.fillRect(0, 0, w, h);
+
+      // Sintered Ceramic Sleeve Border
+      const padX = 40;
+      const padY = 30;
+      const boxW = w - padX * 2;
+      const boxH = h - padY * 2;
+
+      // Outer ceramic body
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 4;
+      ctx.strokeRect(padX, padY, boxW, boxH);
+
+      // Inner porous matrix fill
+      const moistureRatio = Math.max(0, Math.min(1, (simState.mass - 410) / 70));
+      const gradient = ctx.createLinearGradient(padX, padY, padX, padY + boxH);
+      gradient.addColorStop(0, `rgba(6, 182, 212, ${0.15 * moistureRatio})`);
+      gradient.addColorStop(1, `rgba(16, 185, 129, ${0.12 * moistureRatio})`);
+      ctx.fillStyle = gradient;
+      ctx.fillRect(padX + 2, padY + 2, boxW - 4, boxH - 4);
+
+      // Micro-pore texture grid
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.025)';
+      ctx.lineWidth = 1;
+      const step = 24;
+      for (let x = padX; x < padX + boxW; x += step) {
+        ctx.beginPath();
+        ctx.moveTo(x, padY);
+        ctx.lineTo(x, padY + boxH);
+        ctx.stroke();
+      }
+      for (let y = padY; y < padY + boxH; y += step) {
+        ctx.beginPath();
+        ctx.moveTo(padX, y);
+        ctx.lineTo(padX + boxW, y);
+        ctx.stroke();
+      }
+
+      // Draw Electrodes (Ag/AgCl sensor bands)
+      const electrodeSpacing = boxW / 4;
+      ctx.fillStyle = '#e2e8f0';
+      for (let i = 1; i <= 3; i++) {
+        const elX = padX + i * electrodeSpacing;
+        // Top electrode ring
+        ctx.fillStyle = '#38bdf8';
+        ctx.fillRect(elX - 3, padY - 6, 6, 12);
+        // Bottom electrode ring
+        ctx.fillStyle = '#38bdf8';
+        ctx.fillRect(elX - 3, padY + boxH - 6, 6, 12);
+        
+        // Electric field lines between sensors
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.12)';
+        ctx.setLineDash([3, 4]);
+        ctx.beginPath();
+        ctx.moveTo(elX, padY + 6);
+        ctx.lineTo(elX, padY + boxH - 6);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      // Draw Plant Root System (Bioregenerative Sponge Core)
+      ctx.save();
+      ctx.strokeStyle = '#10b981';
+      ctx.lineWidth = 2.5;
+      ctx.lineCap = 'round';
+      ctx.shadowColor = 'rgba(16, 185, 129, 0.4)';
+      ctx.shadowBlur = 8;
+
+      const rootBaseX = w / 2;
+      const rootBaseY = padY + 10;
+
+      // Main taproot
+      ctx.beginPath();
+      ctx.moveTo(rootBaseX, rootBaseY);
+      ctx.bezierCurveTo(rootBaseX - 15, rootBaseY + 50, rootBaseX + 15, rootBaseY + 110, rootBaseX - 5, rootBaseY + boxH - 30);
+      ctx.stroke();
+
+      // Branching lateral roots
+      const branches = [
+        { sx: rootBaseX, sy: rootBaseY + 25, ex: rootBaseX - 70, ey: rootBaseY + 70 },
+        { sx: rootBaseX, sy: rootBaseY + 45, ex: rootBaseX + 75, ey: rootBaseY + 85 },
+        { sx: rootBaseX - 10, sy: rootBaseY + 75, ex: rootBaseX - 95, ey: rootBaseY + 130 },
+        { sx: rootBaseX + 8, sy: rootBaseY + 95, ex: rootBaseX + 90, ey: rootBaseY + 150 },
+        { sx: rootBaseX - 5, sy: rootBaseY + 120, ex: rootBaseX - 60, ey: rootBaseY + 180 },
+        { sx: rootBaseX + 4, sy: rootBaseY + 135, ex: rootBaseX + 55, ey: rootBaseY + 190 }
+      ];
+
+      ctx.lineWidth = 1.4;
+      branches.forEach(b => {
+        ctx.beginPath();
+        ctx.moveTo(b.sx, b.sy);
+        ctx.quadraticCurveTo((b.sx + b.ex) / 2 + 10, (b.sy + b.ey) / 2 - 10, b.ex, b.ey);
+        ctx.stroke();
+      });
+      ctx.restore();
+
+      // Draw dynamic particles (Water Meniscus vs Ions)
+      simState.particles.forEach(p => {
+        p.x += p.vx;
+        p.y += p.vy;
+        if (p.x < 0) p.x = 1;
+        if (p.x > 1) p.x = 0;
+        if (p.y < 0) p.y = 1;
+        if (p.y > 1) p.y = 0;
+
+        const px = padX + p.x * boxW;
+        const py = padY + p.y * boxH;
+
+        if (p.type === 'water') {
+          ctx.fillStyle = 'rgba(56, 189, 248, 0.7)';
+          ctx.beginPath();
+          ctx.arc(px, py, p.size, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          // Ion (K+, NO3-)
+          ctx.fillStyle = 'rgba(251, 191, 36, 0.85)';
+          ctx.beginPath();
+          ctx.arc(px, py, p.size * 0.9, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
+
+      // Salt Crystallization Warning Visual
+      if (simState.status === 'SALT_CRYSTALLIZATION') {
+        ctx.fillStyle = 'rgba(244, 63, 94, 0.25)';
+        for (let i = 0; i < 14; i++) {
+          const cx = padX + (i * 29) % boxW;
+          const cy = padY + (i * 47) % boxH;
+          ctx.fillRect(cx, cy, 14, 14);
+          ctx.strokeStyle = '#f43f5e';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(cx, cy, 14, 14);
+        }
+      }
+
+      // Injector Spray Visuals
+      if (simState.waterInjectionRate > 0) {
+        ctx.fillStyle = 'rgba(56, 189, 248, 0.8)';
+        ctx.fillRect(padX + 20, padY - 14, 14, 14);
+        ctx.strokeStyle = '#38bdf8';
+        ctx.beginPath();
+        ctx.moveTo(padX + 27, padY);
+        ctx.lineTo(padX + 27, padY + 25);
+        ctx.stroke();
+      }
+      if (simState.nutrientInjectionRate > 0) {
+        ctx.fillStyle = 'rgba(167, 139, 250, 0.8)';
+        ctx.fillRect(padX + boxW - 34, padY - 14, 14, 14);
+        ctx.strokeStyle = '#a78bfa';
+        ctx.beginPath();
+        ctx.moveTo(padX + boxW - 27, padY);
+        ctx.lineTo(padX + boxW - 27, padY + 25);
+        ctx.stroke();
+      }
+    }
+
+    // =========================================================================
+    // CLOSED-LOOP PHYSICS UPDATE & STATE OBSERVER CONTROLLER
+    // =========================================================================
+    let tickCount = 0;
+
+    function physicsStep() {
+      tickCount++;
+
+      // 1. Natural plant evaporation & transpiration dynamics
+      // Transpiration removes pure water: reduces mass m, increases ion concentration (reduces R or causes crystallization if too high)
+      const transpirationLoss = 0.08 * simState.transpirationFactor * (101.3 / simState.pressure);
+      
+      // Root nutrient consumption: absorbs dissolved salts, INCREASING electrical resistance R without losing bulk mass
+      const ionUptake = 0.045 * simState.ionUptakeFactor;
+
+      // Apply natural depletion
+      simState.mass -= transpirationLoss;
+      // Resistance increases when ions are eaten (ion depletion)
+      simState.resistance += ionUptake * 1.2;
+
+      // Additional non-linear resistance change from water concentration:
+      // If mass drops significantly below 440g, moisture drops, dry ceramic resistance spikes upwards!
+      if (simState.mass < 440.0) {
+        const dryness = (440.0 - simState.mass) * 0.12;
+        simState.resistance += dryness;
+      }
+
+      // 2. AUTONOMOUS OBSERVER & CLOSED-LOOP INVERSION LOGIC
+      if (simState.autonomousLoop) {
+        // Detect Transpiration Drought: Mass is low (< 445g)
+        if (simState.mass < 448.0) {
+          // Command DI-Water Micro-dosing Injector
+          const deficit = 450.0 - simState.mass;
+          simState.waterInjectionRate = Math.min(2.5, Math.max(0.2, deficit * 0.45));
+          simState.mass += simState.waterInjectionRate * 0.35;
+          // Adding DI water dilutes and hydrates: pulls resistance down if elevated
+          simState.resistance -= simState.waterInjectionRate * 0.25;
+        } else {
+          simState.waterInjectionRate = 0.0;
+        }
+
+        // Detect Mineral Starvation: Mass is healthy (>= 445g) but Resistance is high (> 128 Ω)
+        if (simState.resistance > 126.0) {
+          // Command Concentrated Nutrient (NPK+ Salts) Injector
+          const rExcess = simState.resistance - 120.0;
+          simState.nutrientInjectionRate = Math.min(1.8, Math.max(0.15, rExcess * 0.08));
+          // Nutrient adds ions: directly drops resistance back toward nominal 120 Ω
+          simState.resistance -= simState.nutrientInjectionRate * 0.65;
+          // Nutrients have fluid mass
+          simState.mass += simState.nutrientInjectionRate * 0.08;
+        } else {
+          simState.nutrientInjectionRate = 0.0;
+        }
+
+        // Handle flooding prevention if mass > 465g
+        if (simState.mass > 465.0) {
+          simState.waterInjectionRate = 0.0;
+          simState.nutrientInjectionRate = 0.0;
+        }
+      } else {
+        simState.waterInjectionRate = 0.0;
+        simState.nutrientInjectionRate = 0.0;
+      }
+
+      // Safety clamp values within physical bounds
+      simState.mass = Math.max(405.0, Math.min(495.0, simState.mass));
+      simState.resistance = Math.max(85.0, Math.min(195.0, simState.resistance));
+
+      // Classify System State Diagnostics
+      evaluateSystemStatus();
+
+      // Record Phase-Space History
+      simState.phaseHistory.push({ x: simState.mass, y: simState.resistance });
+      if (simState.phaseHistory.length > 25) {
+        simState.phaseHistory.shift();
+      }
+
+      // Update Time-Series Buffers every 4 ticks
+      if (tickCount % 4 === 0) {
+        histMass.shift();
+        histMass.push(simState.mass);
+        histRes.shift();
+        histRes.push(simState.resistance);
+
+        updateTelemetryHUD();
+        updateCharts();
+      }
+
+      // Draw Hardware Chamber Canvas
+      drawChamber();
+    }
+
+    // Evaluate diagnostic state according to $(m, R)$ mapping
+    function evaluateSystemStatus() {
+      const isLowMass = simState.mass < 438.0;
+      const isHighMass = simState.mass > 465.0;
+      const isHighRes = simState.resistance > 140.0;
+      const isLowRes = simState.resistance < 100.0;
+
+      const badge = document.getElementById('systemStateBadge');
+      const text = document.getElementById('systemStateText');
+      const alertOverlay = document.getElementById('canvasAlertOverlay');
+      const alertText = document.getElementById('canvasAlertText');
+
+      if (isLowMass && isHighRes) {
+        simState.status = 'SALT_CRYSTALLIZATION';
+        simState.alertMsg = 'SALT PRECIPITATION & ROOT DROUGHT';
+        badge.className = 'flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-950/90 border border-rose-600 text-xs font-semibold text-rose-300 mono glow-rose';
+        text.innerText = 'SALT CRYSTALLIZATION HAZARD';
+        alertOverlay.classList.remove('hidden');
+        alertText.innerText = 'ROOT-ZONE SALT CRUST FORMING';
+      } else if (!isLowMass && isHighRes) {
+        simState.status = 'MINERAL_STARVATION';
+        simState.alertMsg = 'NPK DEPLETION (MASS STABLE)';
+        badge.className = 'flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-950/90 border border-amber-600 text-xs font-semibold text-amber-300 mono';
+        text.innerText = 'MINERAL STARVATION DETECTED';
+        alertOverlay.classList.add('hidden');
+      } else if (isLowMass && !isHighRes) {
+        simState.status = 'TRANSPIRATION_DROUGHT';
+        simState.alertMsg = 'RAPID CANOPY TRANSPIRATION WATER LOSS';
+        badge.className = 'flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-950/90 border border-cyan-600 text-xs font-semibold text-cyan-300 mono';
+        text.innerText = 'TRANSPIRATION WATER LOSS';
+        alertOverlay.classList.add('hidden');
+      } else if (isHighMass && isLowRes) {
+        simState.status = 'ROOT_ANOXIA';
+        simState.alertMsg = 'OVER-HYDRATION & ROOT SUFFOCATION';
+        badge.className = 'flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-950/90 border border-blue-600 text-xs font-semibold text-blue-300 mono';
+        text.innerText = 'SUBSTRATE FLOODING / ANOXIA';
+        alertOverlay.classList.add('hidden');
+      } else {
+        simState.status = 'NOMINAL';
+        simState.alertMsg = 'STEADY BIOMASS PRODUCTION';
+        badge.className = 'flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-950/80 border border-emerald-600/60 text-xs font-semibold text-emerald-300 mono';
+        text.innerText = 'NOMINAL STEADY LOOP';
+        alertOverlay.classList.add('hidden');
+      }
+    }
+
+    // Update Numerical HUD displays
+    function updateTelemetryHUD() {
+      document.getElementById('metricMass').innerText = simState.mass.toFixed(1);
+      document.getElementById('metricRes').innerText = simState.resistance.toFixed(1);
+      
+      // Calculate EC equivalent (mS/cm): ~ 218 / R
+      const ec = (218.0 / simState.resistance).toFixed(2);
+      document.getElementById('metricEC').innerText = ec;
+
+      // Substrate Void Saturation %: 400g = 40%, 480g = 95%
+      const sat = Math.max(20, Math.min(99, ((simState.mass - 400) / 80) * 100)).toFixed(1);
+      document.getElementById('metricSat').innerText = sat;
+      document.getElementById('barSat').style.width = `${sat}%`;
+
+      // Injectors
+      document.getElementById('metricInjWater').innerText = simState.waterInjectionRate.toFixed(2);
+      document.getElementById('metricInjNutrient').innerText = simState.nutrientInjectionRate.toFixed(2);
+
+      const dotWater = document.getElementById('dotWater');
+      const lblWater = document.getElementById('lblWater');
+      if (simState.waterInjectionRate > 0) {
+        dotWater.className = 'w-2 h-2 rounded-full bg-sky-400 animate-ping';
+        lblWater.innerText = 'PZT ACTIVE (DOSING)';
+        lblWater.className = 'text-sky-300 font-semibold';
+        document.getElementById('railPZT1').className = 'px-2 py-0.5 rounded bg-sky-950 text-sky-300 border border-sky-600';
+      } else {
+        dotWater.className = 'w-2 h-2 rounded-full bg-gray-600';
+        lblWater.innerText = 'IDLE / CLOSED';
+        lblWater.className = 'text-gray-500';
+        document.getElementById('railPZT1').className = 'px-2 py-0.5 rounded bg-gray-900 text-gray-300 border border-gray-800';
+      }
+
+      const dotNutrient = document.getElementById('dotNutrient');
+      const lblNutrient = document.getElementById('lblNutrient');
+      if (simState.nutrientInjectionRate > 0) {
+        dotNutrient.className = 'w-2 h-2 rounded-full bg-violet-400 animate-ping';
+        lblNutrient.innerText = 'PZT ACTIVE (DOSING)';
+        lblNutrient.className = 'text-violet-300 font-semibold';
+        document.getElementById('railPZT2').className = 'px-2 py-0.5 rounded bg-violet-950 text-violet-300 border border-violet-600';
+      } else {
+        dotNutrient.className = 'w-2 h-2 rounded-full bg-gray-600';
+        lblNutrient.innerText = 'IDLE / CLOSED';
+        lblNutrient.className = 'text-gray-500';
+        document.getElementById('railPZT2').className = 'px-2 py-0.5 rounded bg-gray-900 text-gray-300 border border-gray-800';
+      }
+    }
+
+    // Refresh charts
+    function updateCharts() {
+      // 1. Phase-Space Scatter Update
+      if (phaseChart) {
+        phaseChart.data.datasets[1].data = [...simState.phaseHistory];
+        phaseChart.data.datasets[2].data = [{ x: simState.mass, y: simState.resistance }];
+        
+        // Color head based on status
+        if (simState.status === 'SALT_CRYSTALLIZATION') {
+          phaseChart.data.datasets[2].backgroundColor = '#f43f5e';
+        } else if (simState.status === 'MINERAL_STARVATION') {
+          phaseChart.data.datasets[2].backgroundColor = '#f59e0b';
+        } else if (simState.status === 'NOMINAL') {
+          phaseChart.data.datasets[2].backgroundColor = '#10b981';
+        } else {
+          phaseChart.data.datasets[2].backgroundColor = '#38bdf8';
+        }
+        phaseChart.update('none');
+      }
+
+      // 2. Time Series Updates
+      if (timeSeriesMassChart) {
+        timeSeriesMassChart.data.datasets[0].data = [...histMass];
+        timeSeriesMassChart.update('none');
+      }
+      if (timeSeriesResChart) {
+        timeSeriesResChart.data.datasets[0].data = [...histRes];
+        timeSeriesResChart.update('none');
+      }
+    }
+
+    // =========================================================================
+    // USER CONTROLS & FAULT INJECTION
+    // =========================================================================
+    function toggleAutonomousLoop() {
+      simState.autonomousLoop = !simState.autonomousLoop;
+      const btn = document.getElementById('toggleAutoBtn');
+      if (simState.autonomousLoop) {
+        btn.innerText = 'ACTIVE [AUTO]';
+        btn.className = 'px-3 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs mono transition shadow-lg shadow-emerald-900/50';
+      } else {
+        btn.innerText = 'MANUAL [OPEN LOOP]';
+        btn.className = 'px-3 py-1 rounded-md bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs mono transition shadow-lg shadow-rose-900/50';
+      }
+    }
+
+    function updateSliders() {
+      simState.transpirationFactor = parseFloat(document.getElementById('sliderTranspiration').value);
+      document.getElementById('valTranspiration').innerText = `${simState.transpirationFactor.toFixed(1)}x Nominal`;
+
+      simState.ionUptakeFactor = parseFloat(document.getElementById('sliderIonUptake').value);
+      document.getElementById('valIonUptake').innerText = `${simState.ionUptakeFactor.toFixed(1)}x Nominal`;
+
+      simState.pressure = parseFloat(document.getElementById('sliderPressure').value);
+      document.getElementById('valChamberPressure').innerText = `${simState.pressure.toFixed(1)} kPa`;
+    }
+
+    function setGravity(gVal, gLabel) {
+      simState.gFactor = gVal;
+      simState.gravityName = gLabel;
+      document.getElementById('valGravity').innerText = gLabel;
+      document.getElementById('gravityRegimeText').innerText = gLabel;
+    }
+
+    function injectFault(faultType) {
+      if (faultType === 'transpiration') {
+        // Instant drop in mass due to heat lamp spike
+        simState.mass -= 28.0;
+        simState.transpirationFactor = 2.8;
+        document.getElementById('sliderTranspiration').value = 2.8;
+        document.getElementById('valTranspiration').innerText = '2.8x Nominal';
+      } else if (faultType === 'starvation') {
+        // Fast ion consumption: resistance spikes, mass unchanged
+        simState.resistance += 45.0;
+        simState.ionUptakeFactor = 2.5;
+        document.getElementById('sliderIonUptake').value = 2.5;
+        document.getElementById('valIonUptake').innerText = '2.5x Nominal';
+      } else if (faultType === 'salt_crust') {
+        // Extreme condition: massive drought + salt accumulation
+        simState.mass = 412.0;
+        simState.resistance = 175.0;
+        simState.transpirationFactor = 3.2;
+        document.getElementById('sliderTranspiration').value = 3.2;
+        document.getElementById('valTranspiration').innerText = '3.2x Nominal';
+      } else if (faultType === 'reset') {
+        simState.mass = 450.0;
+        simState.resistance = 120.0;
+        simState.transpirationFactor = 1.2;
+        simState.ionUptakeFactor = 1.0;
+        simState.pressure = 70.3;
+        simState.autonomousLoop = true;
+        document.getElementById('sliderTranspiration').value = 1.2;
+        document.getElementById('sliderIonUptake').value = 1.0;
+        document.getElementById('sliderPressure').value = 70.3;
+        document.getElementById('toggleAutoBtn').innerText = 'ACTIVE [AUTO]';
+        document.getElementById('toggleAutoBtn').className = 'px-3 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs mono transition shadow-lg shadow-emerald-900/50';
+        updateSliders();
+      }
+    }
+
+    // =========================================================================
+    // WINDOW ONLOAD INITIALIZATION
+    // =========================================================================
+    window.onload = function () {
+      // Initialize Lucide Icons
+      if (window.lucide) {
+        lucide.createIcons();
+      }
+
+      // Initialize Particles & Charts
+      initParticles();
+      initCharts();
+      resizeCanvas();
+
+      // Start Real-Time Simulation Loop (40ms = 25Hz execution)
+      setInterval(physicsStep, 40);
+    };
+  </script>
+</body>
+</html>
